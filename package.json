@@ -1,0 +1,12 @@
+{
+  "name": "ai-workflow-deck",
+  "private": true,
+  "description": "Builds index.html from ai-workflow.md. marked parses the Markdown (tables, nested lists, fences), which a hand-rolled parser would not do reliably; mermaid-cli runs through npx at a pinned version.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "marked": "15.0.12"
+  }
+}
