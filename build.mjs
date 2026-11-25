@@ -1,7 +1,12 @@
-// Builds index.html, a self-contained slide deck, from ai-workflow.md.
+// Builds a self-contained page from Markdown: by default index.html, the slide deck, from
+// ai-workflow.md.
 //
-//   npm install            once, for marked (the Markdown parser)
-//   node build.mjs [path]  path defaults to ai-workflow.md beside this script
+//   npm install                                  once, for marked (the Markdown parser)
+//   node build.mjs [source.md [output.html]] [--scroll]
+//
+// The source defaults to ai-workflow.md beside this script, the output to index.html beside it.
+// --scroll opens the page in the scroll view rather than as slides, for a long read such as the
+// architecture guide; each page remembers the reader's own choice under its own key.
 //
 // Each part of the Markdown between horizontal rules becomes one slide; the part before the first
 // rule is the title slide. Mermaid diagrams are rendered at build time with mermaid-cli 11.4.2
@@ -22,9 +27,18 @@ const MERMAID_CLI = '@mermaid-js/mermaid-cli@11.4.2';
 const DIAGRAM_FONT = 'Arial, Helvetica, sans-serif';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const srcPath = resolve(process.argv[2] ?? join(here, 'ai-workflow.md'));
-const outPath = join(here, 'index.html');
+const args = process.argv.slice(2);
+const scrollFirst = args.includes('--scroll');
+const positional = args.filter((a) => a !== '--scroll');
+const unknown = positional.find((a) => a.startsWith('--'));
+if (unknown || positional.length > 2) throw new Error(`usage: node build.mjs [source.md [output.html]] [--scroll]; got ${args.join(' ')}`);
+const srcPath = resolve(positional[0] ?? join(here, 'ai-workflow.md'));
+const outPath = resolve(positional[1] ?? join(here, 'index.html'));
 if (!existsSync(srcPath)) throw new Error(`Markdown source not found: ${srcPath}`);
+if (!existsSync(dirname(outPath))) throw new Error(`Output folder not found: ${dirname(outPath)}`);
+// The deck keeps the key it always had, so a reader's choice there survives this option.
+const modeKey = scrollFirst ? 'guide-mode' : 'deck-mode';
+const defaultMode = scrollFirst ? 'scroll' : 'slides';
 
 // --- Mermaid ---------------------------------------------------------------------------------
 
@@ -326,7 +340,7 @@ ${sections}
     modeBtn.textContent = deck ? 'Scroll view' : 'Slide view';
     modeBtn.setAttribute('aria-pressed', deck ? 'false' : 'true');
     [prev, next, jump, count].forEach(function (el) { el.style.display = deck ? '' : 'none'; });
-    store('deck-mode', deck ? 'slides' : 'scroll');
+    store('${modeKey}', deck ? 'slides' : 'scroll');
     if (deck) show(index);
     else slides[index].scrollIntoView();
   }
@@ -393,7 +407,7 @@ ${sections}
   root.classList.add('js');
   index = fromHash();
   themeLabel();
-  setMode(read('deck-mode') !== 'scroll');
+  setMode((read('${modeKey}') || '${defaultMode}') !== 'scroll');
 })();
 </script>
 </body>
